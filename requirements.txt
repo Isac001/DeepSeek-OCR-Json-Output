@@ -1,9 +1,26 @@
+# IA and Performance
+accelerate>=0.26.0
 transformers==4.46.3
 tokenizers==0.20.3
-PyMuPDF
-img2pdf
-einops
-easydict
-addict 
-Pillow
-numpy
+torch==2.6.0+cu118
+einops==0.8.2
+safetensors==0.7.0
+
+# Files Manipulation
+pdf2image==1.17.0
+PyMuPDF==1.27.2
+img2pdf==0.6.3
+Pillow==12.0.0
+beautifulsoup4==4.14.3
+lxml==6.0.2
+
+# Data Structures
+numpy==2.3.5
+easydict==1.13
+addict==2.4.0
+python-dotenv
+
+# Back-end API (FastAPI)
+fastapi==0.135.2
+uvicorn[standard]==0.42.0
+python-multipart==0.0.22

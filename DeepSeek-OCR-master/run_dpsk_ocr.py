@@ -148,10 +148,10 @@ def parse_html_table(table_tag):
     ┌─ ALTERNATING PATTERN (headers without ':') ────────────────────────────┐
     │ Even rows = labels, odd rows = values.                                 │
     │ Ex: Alvará de Funcionamento                                            │
-    │   CPF/CNPJ | Área  | Porte              | Horário     ← labels        │
-    │   18.628…  | 171m² | Microempresa (ME…) | 07:00-17:00 ← data         │
-    │                                                                         │
-    │ Discriminator: has_explicit_keys=False AND ≥1 label/data pair found   │
+    │   CPF/CNPJ | Área  | Porte              | Horário     ← labels         │
+    │   XX.XXXX…  | XXXm² | Microempresa (ME…) | 07:00-17:00 ← data          │
+    │                                                                        │
+    │ Discriminator: has_explicit_keys=False AND ≥1 label/data pair found    │
     └────────────────────────────────────────────────────────────────────────┘
     """
 

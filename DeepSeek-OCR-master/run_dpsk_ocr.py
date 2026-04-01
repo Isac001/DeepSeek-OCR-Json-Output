@@ -24,8 +24,6 @@ output_dir = os.path.join(BASE_DIR, "result")
 os.makedirs(input_dir, exist_ok=True)
 os.makedirs(output_dir, exist_ok=True)
 
-# Create the output directory if it does not already exist
-os.makedirs(output_dir, exist_ok=True)
 
 # Funciton to cleanup the folder
 def cleanup_output_folder(folder_path):
@@ -40,12 +38,11 @@ def cleanup_output_folder(folder_path):
         item_path = os.path.join(folder_path, item)
 
         try:
-            # Check whether the current item is a regular file
-            if os.path.isfile(item_path):
 
-                # Remove the file only if it is NOT a JSON file (preserve results)
-                if not item_path.lower().endswith('.json'):
-                    os.remove(item_path)
+            # Check whether the current item 
+            if os.path.isfile(item_path):
+ 
+                os.remove(item_path)
 
             # Check whether the current item is a directory
             elif os.path.isdir(item_path):
@@ -379,7 +376,7 @@ def parse_html_table(table_tag):
 # MMD → structured JSON conversion
 # ──────────────────────────────────────────────
 
-def convert_mmd_to_structured_json(file_path, final_json_path):
+def convert_mmd_to_structured_json(file_path):
     print(f"Convertendo {file_path} para JSON...")
 
     # Abort early if the source .mmd file does not exist on disk
@@ -441,106 +438,103 @@ def convert_mmd_to_structured_json(file_path, final_json_path):
             # Store the detected field in the dedicated section
             document_structure['fields_detected'][key] = value
 
-    # Write the assembled structure to disk as a formatted JSON file
-    with open(final_json_path, 'w', encoding='utf-8') as f:
-        json.dump(document_structure, f, indent=4, ensure_ascii=False)
-
-    print(f"Sucesso! JSON salvo em: {final_json_path}")
     return document_structure
-
-# Main class to be used by endpoit
+# Main class to be used by the endpoint
 class DeepSeekOCRProcessor:
 
+    # Static main method
     @staticmethod
-    def main():
+    def main(model, tokenizer):
 
-        # Load the tokenizer from the pre-trained model repository
-        print("--- Carregando modelo e tokenizer ---")
-        tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-
-        # Load the model in bfloat16 precision and distribute across available devices
-        model = AutoModel.from_pretrained(
-            model_name,
-            trust_remote_code=True,
-            torch_dtype=torch.bfloat16,
-            device_map="auto"
-        )
-
-        # Switch the model to inference mode (disables dropout and gradient tracking)
-        model.eval()
+        # Ensure input and output directories exist before processing
+        os.makedirs(input_dir, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
 
         print(f"Escaneando pasta: {input_dir}")
 
-        # Build the flat list of all page images to be processed (PDFs expanded)
+        # Build the flat list of all page images to be processed
         all_pages = create_master_list(input_dir, output_dir)
 
-        # Record the total number of pages for progress reporting
-        total     = len(all_pages)
+        # Store the total number of pages for progress logging
+        total = len(all_pages)
+
+        # Dictionary that will accumulate results for every processed page
+        all_results = {}
 
         print(f"Iniciando processamento de {total} página(s).")
 
-        # Iterate over every page image with its 1-based index for logging
+        # Iterate over each page image with its 1-based index for logging
         for index, current_img_path in enumerate(all_pages):
 
-            # Derive a unique identifier from the image file name (no extension)
-            page_id     = os.path.basename(current_img_path).rsplit('.', 1)[0]
+            # Extract the filename without extension to use as the page identifier
+            page_id = os.path.basename(current_img_path).rsplit('.', 1)[0]
 
-            # Path where the model writes its default output file
+            # Default path where the model always writes its output file
             mmd_default = os.path.join(output_dir, 'result.mmd')
 
-            # Final .mmd path renamed to include the page identifier
-            mmd_final   = os.path.join(output_dir, f"{page_id}.mmd")
-
-            # Final .json path for the structured extraction output
-            json_final  = os.path.join(output_dir, f"{page_id}.json")
+            # Final path for the .mmd file renamed with the page identifier
+            mmd_final = os.path.join(output_dir, f"{page_id}.mmd")
 
             print(f"\n[{index + 1}/{total}] Processando: {os.path.basename(current_img_path)}")
 
             try:
-
-                # Run the DeepSeek OCR model on the current page image
+                # Run the OCR model on the current page image
                 model.infer(
+
                     tokenizer,
+                    # Prompt instructs the model to convert the image to markdown
                     prompt="<image>\n<|grounding|>Convert the document to markdown.",
+
+                    # Path to the current page image
                     image_file=current_img_path,
+
+                    # Directory where the model will write result.mmd
                     output_path=output_dir,
+
+                    # Tell the model to persist its output to disk
                     save_results=True
                 )
 
-                # Check that the model produced its default output file
+                # Check if the model produced the expected output file
                 if os.path.exists(mmd_default):
 
-                    # Remove any stale .mmd file from a previous run for this page
+                    # Remove a stale .mmd from a previous run for this page
                     if os.path.exists(mmd_final):
                         os.remove(mmd_final)
 
-                    # Rename the generic result file to the page-specific name
+                    # Rename the generic output file to the page-specific name
                     os.rename(mmd_default, mmd_final)
 
-                    # Convert the .mmd file into a structured JSON document
-                    convert_mmd_to_structured_json(mmd_final, json_final)
+                    # Parse the .mmd file into a structured dictionary
+                    result = convert_mmd_to_structured_json(mmd_final)
 
-                    print(f"  -> Resultado salvo em {page_id}.json")
+                    # Only store the result if the conversion returned valid data
+                    if result:
+                        all_results[page_id] = result
 
                 else:
 
-                    # Warn if the model did not produce any output for this page
+                    # Warn if the model did not generate any output for this page
                     print(f"  !! Aviso: result.mmd não encontrado para {page_id}.")
+                    all_results[page_id] = {"error": "result.mmd não gerado pelo modelo"}
 
             except torch.cuda.OutOfMemoryError:
 
-                # Handle GPU out-of-memory gracefully: log and free VRAM
+                # GPU ran out of memory: free the cache and record the error
                 print(f"  !! Erro: VRAM insuficiente ao processar {page_id}.")
                 torch.cuda.empty_cache()
+                all_results[page_id] = {"error": "VRAM insuficiente"}
 
             except Exception as e:
 
-                # Catch any other unexpected error and continue with the next page
+                # Catch any other unexpected error and continue to the next page
                 print(f"  !! Erro inesperado em {page_id}: {e}")
+                all_results[page_id] = {"error": str(e)}
 
-        # Remove all intermediate files from the output folder, keeping only JSONs
+        # Delete all temporary files from the output folder after processing
         cleanup_output_folder(output_dir)
+
         print("\n--- OCR de todos os arquivos concluído ---")
 
-    if __name__ == "__main__":
-        main()
+        # Return the dictionary with results for all processed pages
+        return all_results

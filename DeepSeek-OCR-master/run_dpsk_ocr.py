@@ -139,19 +139,19 @@ def parse_html_table(table_tag):
     │ Each row contains side-by-side pairs. Keys end with ':'.               │
     │ Ex: Alvará Sanitário                                                   │
     │   Tipo de Tributação: | TRIBUTÁVEL | Informação: | INICIAL             │
-    │   Razão Social:       | DM AMBIENTAL LTDA                              │
-    │   CPF/CNPJ:           | 18.628…    | Insc. Municipal: | 203239648      │
-    │                                                                         │
-    │ Discriminator: ≥50% of rows start with a cell ending in ':'           │
+    │   Razão Social:       | XXXX XXXX XXXXXXXX                             │
+    │   CPF/CNPJ:           | XX.XXXX…    | Insc. Municipal: | XXXXXXXX      │
+    │                                                                        │
+    │ Discriminator: ≥50% of rows start with a cell ending in ':'            │
     └────────────────────────────────────────────────────────────────────────┘
 
     ┌─ ALTERNATING PATTERN (headers without ':') ────────────────────────────┐
     │ Even rows = labels, odd rows = values.                                 │
     │ Ex: Alvará de Funcionamento                                            │
-    │   CPF/CNPJ | Área  | Porte              | Horário     ← labels        │
-    │   18.628…  | 171m² | Microempresa (ME…) | 07:00-17:00 ← data         │
-    │                                                                         │
-    │ Discriminator: has_explicit_keys=False AND ≥1 label/data pair found   │
+    │   CPF/CNPJ | Área  | Porte              | Horário     ← labels         │
+    │   XX.XXXX…  | XXXm² | Microempresa (ME…) | 07:00-17:00 ← data          │
+    │                                                                        │
+    │ Discriminator: has_explicit_keys=False AND ≥1 label/data pair found    │
     └────────────────────────────────────────────────────────────────────────┘
     """
 
